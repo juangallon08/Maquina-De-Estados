@@ -71,39 +71,41 @@ void WDT_Initialize(void)
     // WDTPS 1:65536; SWDTEN OFF; 
     WDTCON = 0x16;
 }
-//funcion para la maquina de estados 
+// define los casos 
 typedef enum {
     ABRIENDO,
     CERRANDO,
     PARADO,
+    SENSOR,        
    
 }Estados_t;
-
+// Funcion maquina de estados 
 void updata_MEF (void){
-    static Estados_t Estado = ABRIENDO; 
+    static Estados_t Estado = ABRIENDO; // se inicia el estado y se guarda 
     int tiempoA = 0;
     int tiempoC = 0;
-    int C = 0;
+    int C = 0;           // variables del programa 
     int R = 10;
-    int R2 = 10;
+    int R2 = 10;        
     int R3 = 10;
     int A = 0;
-    
+    int TA = 0;
+    int TC = 0;    
     switch (Estado){
-        case ABRIENDO:
+        case ABRIENDO:  // se prende un led en este caso el amarillon 
             if(PORTAbits.RA0 == 0){
-               for(int i=0;i<=R;i+=1 ){
+               for(int i=0;i<=R;i+=1 ){ // cuenta del tiempo de encendido para detener en 10 segundos, si no se precenta el paro 
                    PORTBbits.RB0 = 1;
-                   if(PORTAbits.RA2 == 0){
-                      PORTBbits.RB0 = 0;
-                      PORTBbits.RB1 = 1; 
+                   if(PORTAbits.RA2 == 0){ // si detecta en alto RA2 se detiene la ejecucion y enciende el led verde 
+                      PORTBbits.RB0 = 0;   // y se envia al caso PARADO donde se pude ranudar la ejecucion o 
+                      PORTBbits.RB1 = 1;  // se procede a cerrarce 
                       __delay_ms(800); 
-                       R = tiempoA;
-                       A = 1;
+                       R = tiempoA;    // de locntrario se cumple su tiempo de encendido, sin interruciones y el led 
+                       A = 1;          // amarillo se apaga indicando que ya esta abierto completamente 
                } else { tiempoA+=1;}
                   __delay_ms(600); 
                 }
-               PORTBbits.RB1 = 0;
+               PORTBbits.RB1 = 0;   
                PORTBbits.RB0 = 0;
                __delay_ms(100); 
                if (A == 1){
@@ -113,20 +115,22 @@ void updata_MEF (void){
             }
             break;       
                 
-        case CERRANDO: 
+        case CERRANDO:             // prende el led rojo que indica el cierre de la puerta 
             if(PORTAbits.RA3 == 0){
-               for(int i=0;i<=R2;i+=1 ){
+               for(int i=0;i<=R2;i+=1 ){ //cuenta del tiempo de cerrado para detener en 10 segundos, si no se precenta el paro 
                    PORTBbits.RB2 = 1;
-                   __delay_ms(600);
+                   __delay_ms(500);
                    if(PORTAbits.RA2 == 0){ // paroo en la rutina cerrando
                       PORTBbits.RB2 = 0;
-                      PORTBbits.RB1 = 1; 
-                      __delay_ms(600);
-                      R2 = tiempoC;
+                      PORTBbits.RB1 = 1; // al detectarce el paro se rompe el ciclo 
+                      __delay_ms(600);   // de locntrario se cumple su tiempo de cerrado, sin interruciones y el led 
+                      R2 = tiempoC;     //rojo se apaga indicando que ya esta cerrado completamente 
                       C = 1;
                      }
                    else { tiempoC+=1;}
-                   __delay_ms(60); }
+                   if(TC=0){
+                   __delay_ms(60);} 
+                   else{ __delay_ms(10); }  }
                
                 PORTBbits.RB1 = 0;
                 PORTBbits.RB2 = 0;
@@ -136,12 +140,14 @@ void updata_MEF (void){
                else 
                {Estado = ABRIENDO;}}
             break;  
-        case PARADO:
-            if(PORTAbits.RA3 == 0){
+        case PARADO:                   // este estado indica que se interrumpio alguna rutina 
+            if(PORTAbits.RA3 == 0){  // se pregunta por el estado de los puertos para continuar con los estados 
                Estado = CERRANDO;
+               TC=1;                  
                 }
             if(PORTAbits.RA0 == 0){
                Estado = ABRIENDO;
+               TA=1;
                 }
             break;
                 
